@@ -19,13 +19,22 @@ NUMERIC_COLS = ["esent", "eopenrate", "eclickrate", "avgorder", "ordfreq"]
 BINARY_COLS = ["paperless", "refill", "doorstep"]
 CATEGORICAL_COLS = ["favday", "city"]
 
+# Features created during engineering and derived from DATE_COLS
+ENGINEERED_COLS = [
+    "tenure_days",                # How long the user has been a customer
+    "days_first_to_last_order",   # Engagement window duration
+    "days_since_first_order",     # Time since first purchase
+    "order_recency_ratio",        # How recent is last activity (0=stale, 1=recent)
+]
+
+
 # Splitting values
 TEST_SIZE = 0.15
 VAL_SIZE = 0.15
 RANDOM_STATE = 42
 
 # mlflow experiment name 
-MLFLOW_EXPERIMENT = "user-retention-challenge"
+MLFLOW_EXPERIMENT = "baubap-mlops-challenge"
 
 # Predictions 
 PREDICTIONS_DB = LOGS_DIR / "predictions.db"
