@@ -1,6 +1,8 @@
+import sys
 import json
 import pickle
 import argparse
+from pathlib import Path
 
 import mlflow
 import mlflow.sklearn
@@ -15,10 +17,11 @@ from sklearn.metrics import (
 )
 from xgboost import XGBClassifier
 
-from src.config import (
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config import (
     MLFLOW_EXPERIMENT, ARTIFACTS_DIR, RANDOM_STATE, CHURN_CLASS,
 )
-from src.data.preprocessing import prepare_data
+from data.preprocessing import prepare_data
 
 def get_models() -> dict:
     """
@@ -212,7 +215,7 @@ def train_all(data_path: str) -> tuple:
             print(f"  optimal_threshold: {opt_threshold:.4f} (F1={opt_f1:.4f})")
 
             # Log model artifact to MLflow
-            mlflow.sklearn.log_model(model, artifact_path="model") # type: ignore
+            mlflow.sklearn.log_model(model, name="model") # type: ignore
 
             # Track results
             results[name] = {

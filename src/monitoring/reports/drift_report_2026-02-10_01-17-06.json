@@ -1,0 +1,108 @@
+{
+  "timestamp": "2026-02-10_01-17-06",
+  "data_drift": {
+    "numeric": {
+      "esent": {
+        "psi": 0.0011696905855985015,
+        "ks": {
+          "ks_statistics": 0.016079730629205202,
+          "p_value": 0.2761489219391088,
+          "drift_detected": false
+        }
+      },
+      "eopenrate": {
+        "psi": 0.0007082061924324629,
+        "ks": {
+          "ks_statistics": 0.007858376834085912,
+          "p_value": 0.9715021785354497,
+          "drift_detected": false
+        }
+      },
+      "eclickrate": {
+        "psi": 0.0026612304601665968,
+        "ks": {
+          "ks_statistics": 0.012829420486718868,
+          "p_value": 0.5541696028467653,
+          "drift_detected": false
+        }
+      },
+      "avgorder": {
+        "psi": 2.5674718554452137e-05,
+        "ks": {
+          "ks_statistics": 0.013992381946155596,
+          "p_value": 0.44196590621272014,
+          "drift_detected": false
+        }
+      },
+      "ordfreq": {
+        "psi": 0.0017041449417954037,
+        "ks": {
+          "ks_statistics": 0.010859941828007313,
+          "p_value": 0.7565594720739527,
+          "drift_detected": false
+        }
+      },
+      "tenure_days": {
+        "psi": 0.003020175138214027,
+        "ks": {
+          "ks_statistics": 0.01029686321412826,
+          "p_value": 0.8108378490277439,
+          "drift_detected": false
+        }
+      },
+      "days_first_to_last_order": {
+        "psi": 0.00069883643540794,
+        "ks": {
+          "ks_statistics": 0.005793540843269995,
+          "p_value": 0.9994905113723853,
+          "drift_detected": false
+        }
+      },
+      "days_since_first_order": {
+        "psi": 0.0026771365457873364,
+        "ks": {
+          "ks_statistics": 0.008707105331299037,
+          "p_value": 0.9328524859416599,
+          "drift_detected": false
+        }
+      },
+      "order_recency_ratio": {
+        "psi": 0.003557991252730355,
+        "ks": {
+          "ks_statistics": 0.009072574768972497,
+          "p_value": 0.9100824146351915,
+          "drift_detected": false
+        }
+      }
+    },
+    "categorical": {
+      "favday": {
+        "chi2_statistics": 3.3788824545923535,
+        "p_value": 0.7600078565716328,
+        "drift_detected": "False"
+      },
+      "city": {
+        "chi2_statistics": 1.0447174263563646,
+        "p_value": 0.7904334123932469,
+        "drift_detected": "False"
+      }
+    }
+  },
+  "prediction_drift": {
+    "score_psi": 0.0020088100713243546,
+    "score_psi_status": "OK",
+    "ref_positive_rate": 0.19948018193632228,
+    "cur_positive_rate": 0.19900389779125163,
+    "positive_rate_drift": 0.00047628414507064343,
+    "rate_drift_alert": "False"
+  },
+  "service_metrics": {
+    "total_predictions": 200,
+    "error_count": 0,
+    "error_rate": 0.0,
+    "latency_p50_ms": 0.6362502463161945,
+    "latency_p95_ms": 1.3353299349546432,
+    "latency_p99_ms": 3.023733301088212,
+    "unique_model_versions": 1
+  }
+}

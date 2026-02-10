@@ -1,21 +1,23 @@
-import argparse
+import sys
 import json
 import pickle
 import sqlite3
-from datetime import datetime
+import argparse
 from pathlib import Path
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
 from scipy import stats
 
-from src.config import (
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config import (
     ARTIFACTS_DIR, LOGS_DIR, MONITORING_DIR,
     NUMERIC_COLS, CATEGORICAL_COLS, ENGINEERED_COLS,
     PSI_WARNING, PSI_ALERT, KS_PVALUE_THRESHOLD, CHI2_PVALUE_THRESHOLD,
     PREDICTION_RATE_DRIFT_THRESHOLD, CHURN_CLASS
 )
-from src.data.preprocessing import prepare_data
+from data.preprocessing import prepare_data
 
 
 # Calculate PSI
@@ -68,7 +70,7 @@ def compute_ks_test(reference: np.ndarray, current: np.ndarray) -> dict:
     """
     stat, pvalue = stats.ks_2samp(reference, current)
     return {
-        "statistic": float(stat), # type: ignore
+        "ks_statistics": float(stat), # type: ignore
         "p_value": float(pvalue), # type: ignore
         "drift_detected": bool(pvalue < KS_PVALUE_THRESHOLD), # type: ignore
     }
@@ -164,8 +166,7 @@ def compute_service_metrics(db_path: Path) -> dict:
     }
 
 
-# ─── Report Generation ───────────────────────────────────────
-
+# Report Generation
 def generate_report(
     data_drift: dict,
     prediction_drift: dict,
@@ -178,7 +179,7 @@ def generate_report(
     report_path = output_dir / f"drift_report_{timestamp}.md"
 
     lines = [
-        f"# Monitoring Report — {timestamp}",
+        f"# Monitoring Report - {timestamp}",
         "",
         "## 1. Data Drift",
         "",
@@ -193,7 +194,7 @@ def generate_report(
         ks_drift = "Yes" if metrics["ks"]["drift_detected"] else "No"
         lines.append(
             f"| {feat} | {metrics['psi']:.4f} | {psi_status} | "
-            f"{metrics['ks']['statistic']:.4f} | {metrics['ks']['p_value']:.4f} | {ks_drift} |"
+            f"{metrics['ks']['ks_statistics']:.4f} | {metrics['ks']['p_value']:.4f} | {ks_drift} |"
         )
 
     lines += [
@@ -207,7 +208,7 @@ def generate_report(
     for feat, metrics in data_drift.get("categorical", {}).items():
         drift = "Yes" if metrics["drift_detected"] else "No"
         lines.append(
-            f"| {feat} | {metrics['statistic']:.4f} | {metrics['p_value']:.4f} | {drift} |"
+            f"| {feat} | {metrics['chi2_statistics']:.4f} | {metrics['p_value']:.4f} | {drift} |"
         )
 
     lines += [
@@ -233,7 +234,7 @@ def generate_report(
         f"| Metric | Threshold | Meaning |",
         f"|--------|-----------|---------|",
         f"| PSI Warning | > {PSI_WARNING} | Moderate distribution shift |",
-        f"| PSI Alert | > {PSI_ALERT} | Significant shift — investigate |",
+        f"| PSI Alert | > {PSI_ALERT} | Significant shift - investigate |",
         f"| KS p-value | < {KS_PVALUE_THRESHOLD} | Statistically significant difference |",
         f"| Chi2 p-value | < {CHI2_PVALUE_THRESHOLD} | Category proportions shifted |",
         f"| Prediction rate | > {PREDICTION_RATE_DRIFT_THRESHOLD:.0%} absolute | Model behavior changed |",
@@ -297,7 +298,7 @@ def main(data_path: str):
 
     threshold = metadata["threshold"]
 
-    # Reference scores: validation set (what we optimized on)
+    # Reference score with validation set
     X_val_proc = preprocessor.transform(X_val)
     ref_scores = model.predict_proba(X_val_proc)[:, 0]
     ref_labels = (ref_scores >= threshold).astype(int)

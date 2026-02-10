@@ -1,4 +1,4 @@
-
+import sys
 import uuid
 import sqlite3
 from contextlib import contextmanager
@@ -6,7 +6,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from src.config import PREDICTIONS_DB, DATA_SCHEMA_VERSION
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config import PREDICTIONS_DB, DATA_SCHEMA_VERSION
 
 
 CREATE_TABLE_SQL = """
@@ -88,12 +89,13 @@ class PredictionLogger:
         with self._connect() as conn:
             conn.execute(
                 f"""INSERT INTO predictions
-                (timestamp, request_id, model_name, model_version,
-                 data_schema_version, features_hash, score,
-                 predicted_label, true_label, latency_ms, status)
-                VALUES ({timestamp}, {request_id}, {model_name}, {model_version}, 
-                {DATA_SCHEMA_VERSION}, {features_hash}, {score}, {predicted_label},
-                {true_label}, {latency_ms}, {status})"""
+                    (timestamp, request_id, model_name, model_version,
+                    data_schema_version, features_hash, score,
+                    predicted_label, true_label, latency_ms, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (timestamp, request_id, model_name, model_version, 
+                        DATA_SCHEMA_VERSION, features_hash, score, predicted_label,
+                        true_label, latency_ms, status)
             )
         return request_id
 

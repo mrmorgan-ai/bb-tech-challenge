@@ -1,0 +1,21 @@
+{
+  "best_model": "xgboost",
+  "model_version": "1.0.0",
+  "threshold": 0.20237839221954346,
+  "val_metrics": {
+    "roc_auc": 0.9846119212974943,
+    "pr_auc": 0.9714080637505917,
+    "f1": 0.9175946547884187,
+    "precision_at_10pct": 1.0,
+    "lift_at_10pct": 4.870253164556963,
+    "base_churn_rate": 0.20532813515269654
+  },
+  "test_metrics": {
+    "roc_auc": 0.9837747183203562,
+    "pr_auc": 0.971161289772926,
+    "f1": 0.9102990033222591,
+    "precision_at_10pct": 1.0,
+    "lift_at_10pct": 4.866174920969442,
+    "base_churn_rate": 0.20550021654395842
+  }
+}

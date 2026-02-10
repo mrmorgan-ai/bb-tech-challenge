@@ -4,7 +4,7 @@ PROJECT_ROOT = Path(__file__).parent.parent # src -> project root
 DATA_DIR = PROJECT_ROOT / "data"
 ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
 LOGS_DIR = PROJECT_ROOT / "logs"
-MONITORING_DIR = PROJECT_ROOT / "monitoring" / "reports"
+MONITORING_DIR = PROJECT_ROOT / "src" / "monitoring" / "reports"
 
 # Key dataset columns
 TARGET_COL = "retained"

@@ -1,5 +1,7 @@
+import sys
 import json
 import hashlib
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -8,7 +10,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 
-from src.config import (
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config import (
     TARGET_COL, ID_COL, DATE_COLS, NUMERIC_COLS, BINARY_COLS,
     CATEGORICAL_COLS, ENGINEERED_COLS,
     TEST_SIZE, VAL_SIZE, RANDOM_STATE,
