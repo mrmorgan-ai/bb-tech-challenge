@@ -118,7 +118,9 @@ def build_preprocessor() -> ColumnTransformer:
     return preprocessor
 
 
-def split_data(df: pd.DataFrame):
+def split_data(
+    df: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series]:
     """
     Stratified train/validation/test split.
     """
@@ -147,7 +149,9 @@ def split_data(df: pd.DataFrame):
     return X_train, X_val, X_test, y_train, y_val, y_test
 
 
-def prepare_data(path: str, ref_date: pd.Timestamp | None = None):
+def prepare_data(
+    path: str, ref_date: pd.Timestamp | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series, ColumnTransformer, pd.Timestamp]:
     """
     Full data pipeline: load -> clean -> engineer -> split -> build preprocessor.
 

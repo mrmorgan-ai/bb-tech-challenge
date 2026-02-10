@@ -1,6 +1,8 @@
 import argparse
+from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 from sklearn.calibration import calibration_curve
@@ -16,7 +18,7 @@ from src.data.preprocessing import prepare_data
 from src.utils.artifacts import load_all_artifacts, get_churn_probability
 
 
-def plot_calibration(y_true, y_prob, model_name, save_path):
+def plot_calibration(y_true: pd.Series, y_prob: np.ndarray, model_name: str, save_path: Path) -> None:
     """
     Plot calibration curve and score distribution.
     """
@@ -44,7 +46,7 @@ def plot_calibration(y_true, y_prob, model_name, save_path):
     plt.close()
 
 
-def plot_lift_chart(y_true, y_prob, save_path):
+def plot_lift_chart(y_true: pd.Series, y_prob: np.ndarray, save_path: Path) -> None:
     """
     Plot cumulative lift and gains charts.
 
@@ -89,7 +91,7 @@ def plot_lift_chart(y_true, y_prob, save_path):
     plt.close()
 
 
-def plot_threshold_analysis(y_true, y_prob, optimal_threshold, save_path):
+def plot_threshold_analysis(y_true: pd.Series, y_prob: np.ndarray, optimal_threshold: float, save_path: Path) -> None:
     """
     Plot precision, recall, and F1 as functions of threshold.
 
@@ -137,7 +139,7 @@ def plot_threshold_analysis(y_true, y_prob, optimal_threshold, save_path):
     plt.close()
 
 
-def evaluate(data_path: str):
+def evaluate(data_path: str) -> None:
     """Run full evaluation pipeline and generate all plots."""
     model, preprocessor, metadata = load_all_artifacts(ARTIFACTS_DIR)
     _, _, X_test, _, _, y_test, _, _ = prepare_data(data_path)

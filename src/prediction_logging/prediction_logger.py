@@ -35,7 +35,7 @@ class PredictionLogger:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
 
-    def _init_db(self):
+    def _init_db(self) -> None:
         """Create the predictions table if it doesn't exist."""
         with self._connect() as conn:
             conn.execute(CREATE_TABLE_SQL)
@@ -97,7 +97,7 @@ class PredictionLogger:
             )
         return request_id
 
-    def get_predictions(self, limit: int = 100, model_name: Optional[str] = None):
+    def get_predictions(self, limit: int = 100, model_name: Optional[str] = None) -> list[dict]:
         """Retrieve recent predictions as list of dicts."""
         query = "SELECT * FROM predictions"
         params = []
@@ -112,7 +112,7 @@ class PredictionLogger:
             rows = conn.execute(query, params).fetchall()
         return [dict(row) for row in rows]
 
-    def get_scores(self, limit: int = 1000):
+    def get_scores(self, limit: int = 1000) -> list[tuple]:
         """Retrieve scores for monitoring analysis."""
         with self._connect() as conn:
             rows = conn.execute(

@@ -5,6 +5,7 @@ import argparse
 import mlflow
 import mlflow.sklearn
 import numpy as np
+import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import (
@@ -14,13 +15,15 @@ from sklearn.metrics import (
     precision_recall_curve,
 )
 from xgboost import XGBClassifier
+from sklearn.base import BaseEstimator
 
 from src.config import (
     MLFLOW_EXPERIMENT, ARTIFACTS_DIR, RANDOM_STATE, CHURN_CLASS,
 )
 from src.data.preprocessing import prepare_data
+from src.utils.artifacts import get_model_version, get_churn_probability
 
-def get_models() -> dict:
+def get_models() -> dict[str, tuple[BaseEstimator, dict[str, object]]]:
     """
     Define the three model families with their hyperparameters.
 
@@ -82,12 +85,12 @@ def get_models() -> dict:
     }
 
 
-def evaluate_model(model, X, y_true) -> dict:
+def evaluate_model(model: BaseEstimator, X: np.ndarray, y_true: pd.Series) -> dict[str, float]:
     """
     Compute all evaluation metrics for a fitted model
     """
-    # P(churn) = P(retained=0) = first column of predict_proba
-    y_churn_prob = model.predict_proba(X)[:, 0]
+    # Get churn probabilities via classes_ lookup (not hardcoded index)
+    y_churn_prob = get_churn_probability(model, X, CHURN_CLASS)
 
     # Convert target to churn class
     y_churn_true = (y_true == CHURN_CLASS).astype(int)
@@ -123,11 +126,11 @@ def evaluate_model(model, X, y_true) -> dict:
     }
 
 
-def find_optimal_threshold(model, X, y_true) -> tuple:
+def find_optimal_threshold(model: BaseEstimator, X: np.ndarray, y_true: pd.Series) -> tuple[float, float]:
     """
     Find the threshold that maximizes F1 on the churn class in validation set.
     """
-    y_churn_prob = model.predict_proba(X)[:, 0]
+    y_churn_prob = get_churn_probability(model, X, CHURN_CLASS)
     y_churn_true = (y_true == CHURN_CLASS).astype(int)
 
     precisions, recalls, thresholds = precision_recall_curve(
@@ -145,7 +148,7 @@ def find_optimal_threshold(model, X, y_true) -> tuple:
     return float(best_threshold), float(f1_scores[best_idx])
 
 
-def train_all(data_path: str) -> tuple:
+def train_all(data_path: str) -> tuple[dict[str, dict], str]:
     """
     Train all models, log to MLflow, save best model and preprocessor.
 
@@ -239,7 +242,7 @@ def train_all(data_path: str) -> tuple:
 
     metadata = {
         "best_model": best_model_name,
-        "model_version": "1.0.0",
+        "model_version": get_model_version(),
         "ref_date": str(ref_date),
         "threshold": best["threshold"],
         "val_metrics": {k: float(v) for k, v in best["val_metrics"].items()},

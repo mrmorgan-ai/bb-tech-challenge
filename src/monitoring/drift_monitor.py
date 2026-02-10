@@ -62,7 +62,7 @@ def psi_alert_level(psi_value: float) -> str:
 
 
 # Calculate KS Test
-def compute_ks_test(reference: np.ndarray, current: np.ndarray) -> dict:
+def compute_ks_test(reference: np.ndarray, current: np.ndarray) -> dict[str, float | bool]:
     """
     Two-sample Kolmogorov-Smirnov test.
     """
@@ -75,7 +75,7 @@ def compute_ks_test(reference: np.ndarray, current: np.ndarray) -> dict:
 
 
 # Calculate chi-square
-def compute_chi2_test(reference: pd.Series, current: pd.Series) -> dict:
+def compute_chi2_test(reference: pd.Series, current: pd.Series) -> dict[str, float | bool]:
     """
     Chi-square test for categorical feature drift.
     """
@@ -118,7 +118,7 @@ def compute_prediction_drift(
     cur_scores: np.ndarray,
     ref_rate: float, 
     cur_rate: float,
-) -> dict:
+) -> dict[str, float | bool | str]:
     """
     Detect shifts in model output distribution.
     """
@@ -136,7 +136,7 @@ def compute_prediction_drift(
 
 
 # Service metrics
-def compute_service_metrics(db_path: Path) -> dict:
+def compute_service_metrics(db_path: Path) -> dict[str, int | float | str]:
     """
     Query prediction logs for operational health metrics.
     """
@@ -254,7 +254,7 @@ def generate_report(
     return report_path
 
 
-def main(data_path: str):
+def main(data_path: str) -> Path:
     """
     Full monitoring pipeline.
     """

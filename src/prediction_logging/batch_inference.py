@@ -10,7 +10,7 @@ from src.prediction_logging.prediction_logger import PredictionLogger
 from src.utils.artifacts import load_all_artifacts, get_churn_probability
 
 
-def run_batch_inference(data_path: str, n_samples: int = 200):
+def run_batch_inference(data_path: str, n_samples: int = 200) -> None:
     """Run batch inference on test data, logging each prediction."""
     # Load artifacts (centralized, type-checked)
     model, preprocessor, metadata = load_all_artifacts(ARTIFACTS_DIR)

@@ -1,5 +1,7 @@
 import json
 import pickle
+import subprocess
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -65,5 +67,25 @@ def get_churn_probability(model: BaseEstimator, X: np.ndarray, churn_class: int 
     in predict_proba output. sklearn orders columns by model.classes_, which
     depends on the order classes appear in training data.
     """
-    churn_idx = list(model.classes_).index(churn_class)
-    return model.predict_proba(X)[:, churn_idx]
+    churn_idx = list(model.classes_).index(churn_class) # type: ignore
+    return model.predict_proba(X)[:, churn_idx] # type: ignore
+
+
+def get_model_version() -> str:
+    """
+    Generate a traceable version string: YYYYMMDD.git_short_hash.
+
+    Every training run produces a unique version tied to the date and
+    the exact codebase state (git commit). This replaces the hardcoded
+    "1.0.0" and enables tracing any deployed model back to its code.
+    """
+    date_part = datetime.now().strftime("%Y%m%d")
+    try:
+        git_hash = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except Exception:
+        git_hash = "nogit"
+    return f"{date_part}.{git_hash}"
