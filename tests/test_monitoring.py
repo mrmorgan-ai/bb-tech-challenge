@@ -1,9 +1,12 @@
+import sys
 import numpy as np
 import pandas as pd
 import pytest
+from pathlib import Path
 
-from src.data.preprocessing import compute_features_hash
-from src.monitoring.drift_monitor import compute_psi, compute_ks_test, compute_chi2_test, psi_alert_level
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from data.preprocessing import compute_features_hash
+from monitoring.drift_monitor import compute_psi, compute_ks_test, compute_chi2_test, psi_alert_level
 
 
 class TestFeaturesHash:

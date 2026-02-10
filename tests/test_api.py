@@ -1,9 +1,13 @@
+import sys
 import numpy as np
 import pytest
 from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
+from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.api.app import app
+from src.prediction_logging.prediction_logger import PredictionLogger
 
 
 @pytest.fixture
@@ -36,7 +40,6 @@ def client(mock_state, tmp_path):
     app.state.metadata = metadata
 
     # Use a temp DB for the prediction logger
-    from src.prediction_logging.prediction_logger import PredictionLogger
     app.state.logger = PredictionLogger(db_path=tmp_path / "test.db")
 
     return TestClient(app, raise_server_exceptions=False)

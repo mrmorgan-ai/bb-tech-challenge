@@ -1,6 +1,7 @@
 {
   "best_model": "xgboost",
-  "model_version": "1.0.0",
+  "model_version": "20260210.6782f79",
+  "ref_date": "2018-01-17 00:00:00",
   "threshold": 0.20237839221954346,
   "val_metrics": {
     "roc_auc": 0.9846119212974943,

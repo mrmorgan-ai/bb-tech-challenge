@@ -2,6 +2,9 @@ import json
 import pickle
 import argparse
 
+import sys
+from pathlib import Path
+
 import mlflow
 import mlflow.sklearn
 import numpy as np
@@ -17,11 +20,12 @@ from sklearn.metrics import (
 from xgboost import XGBClassifier
 from sklearn.base import BaseEstimator
 
-from src.config import (
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config import (
     MLFLOW_EXPERIMENT, ARTIFACTS_DIR, RANDOM_STATE, CHURN_CLASS,
 )
-from src.data.preprocessing import prepare_data
-from src.utils.artifacts import get_model_version, get_churn_probability
+from data.preprocessing import prepare_data
+from utils.artifacts import get_model_version, get_churn_probability
 
 def get_models() -> dict[str, tuple[BaseEstimator, dict[str, object]]]:
     """
@@ -110,7 +114,7 @@ def evaluate_model(model: BaseEstimator, X: np.ndarray, y_true: pd.Series) -> di
     
     # Take last k indices = top k scores
     top_k_idx = np.argsort(y_churn_prob)[-k:]
-    precision_at_10 = y_churn_true.values[top_k_idx].mean()
+    precision_at_10 = y_churn_true.values[top_k_idx].mean() # type: ignore
 
     # Lift@10%
     base_rate = y_churn_true.mean()
@@ -123,7 +127,7 @@ def evaluate_model(model: BaseEstimator, X: np.ndarray, y_true: pd.Series) -> di
         "precision_at_10pct": precision_at_10,
         "lift_at_10pct": lift_at_10,
         "base_churn_rate": base_rate,
-    }
+    } # type: ignore
 
 
 def find_optimal_threshold(model: BaseEstimator, X: np.ndarray, y_true: pd.Series) -> tuple[float, float]:
@@ -193,22 +197,22 @@ def train_all(data_path: str) -> tuple[dict[str, dict], str]:
             mlflow.log_param("model_family", name)
 
             # Train
-            model.fit(X_train_processed, y_train)
+            model.fit(X_train_processed, y_train) # type: ignore
 
             # Evaluate on validation (for model selection)
-            val_metrics = evaluate_model(model, X_val_processed, y_val)
+            val_metrics = evaluate_model(model, X_val_processed, y_val) # type: ignore
             for metric_name, value in val_metrics.items():
                 mlflow.log_metric(f"val_{metric_name}", value)
                 print(f"val_{metric_name}: {value:.4f}")
 
             # Evaluate on test (for unbiased reporting)
-            test_metrics = evaluate_model(model, X_test_processed, y_test)
+            test_metrics = evaluate_model(model, X_test_processed, y_test) # type: ignore
             for metric_name, value in test_metrics.items():
                 mlflow.log_metric(f"test_{metric_name}", value)
 
             # Optimize threshold on validation
             opt_threshold, opt_f1 = find_optimal_threshold(
-                model, X_val_processed, y_val
+                model, X_val_processed, y_val # type: ignore
             )
             mlflow.log_metric("optimal_threshold", opt_threshold)
             mlflow.log_metric("optimal_f1", opt_f1)
@@ -251,7 +255,7 @@ def train_all(data_path: str) -> tuple[dict[str, dict], str]:
     with open(ARTIFACTS_DIR / "model_metadata.json", "w") as f:
         json.dump(metadata, f, indent=2)
 
-    return results, best_model_name
+    return results, best_model_name # type: ignore
 
 
 if __name__ == "__main__":

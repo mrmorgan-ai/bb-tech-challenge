@@ -1,3 +1,4 @@
+import sys
 import json
 import sqlite3
 import argparse
@@ -8,14 +9,15 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from src.config import (
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config import (
     ARTIFACTS_DIR, LOGS_DIR, MONITORING_DIR,
     NUMERIC_COLS, CATEGORICAL_COLS, ENGINEERED_COLS,
     PSI_WARNING, PSI_ALERT, KS_PVALUE_THRESHOLD, CHI2_PVALUE_THRESHOLD,
     PREDICTION_RATE_DRIFT_THRESHOLD, CHURN_CLASS
 )
-from src.data.preprocessing import prepare_data
-from src.utils.artifacts import load_all_artifacts, get_churn_probability
+from data.preprocessing import prepare_data
+from utils.artifacts import load_all_artifacts, get_churn_probability
 
 
 # Calculate PSI
@@ -275,8 +277,8 @@ def main(data_path: str) -> Path:
             cur_vals = current[feat].dropna().values
             if len(ref_vals) > 0 and len(cur_vals) > 0:
                 data_drift["numeric"][feat] = {
-                    "psi": compute_psi(ref_vals, cur_vals),
-                    "ks": compute_ks_test(ref_vals, cur_vals),
+                    "psi": compute_psi(ref_vals, cur_vals), # type: ignore
+                    "ks": compute_ks_test(ref_vals, cur_vals), # type: ignore
                 }
 
     for feat in CATEGORICAL_COLS:

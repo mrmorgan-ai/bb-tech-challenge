@@ -1,13 +1,16 @@
+import sys
 import json
 import time
 import argparse
+from pathlib import Path
 
 import numpy as np
 
-from src.config import ARTIFACTS_DIR, CHURN_CLASS
-from src.data.preprocessing import prepare_data, compute_features_hash
-from src.prediction_logging.prediction_logger import PredictionLogger
-from src.utils.artifacts import load_all_artifacts, get_churn_probability
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config import ARTIFACTS_DIR, CHURN_CLASS
+from data.preprocessing import prepare_data, compute_features_hash
+from prediction_logging.prediction_logger import PredictionLogger
+from utils.artifacts import load_all_artifacts, get_churn_probability
 
 
 def run_batch_inference(data_path: str, n_samples: int = 200) -> None:

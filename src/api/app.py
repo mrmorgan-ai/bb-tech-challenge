@@ -1,7 +1,9 @@
+import sys
 import json
 import time
 from contextlib import asynccontextmanager
 from typing import Optional
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -9,10 +11,11 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from src.config import ARTIFACTS_DIR, MONITORING_DIR, CHURN_CLASS
-from src.data.preprocessing import engineer_features, compute_features_hash
-from src.prediction_logging.prediction_logger import PredictionLogger
-from src.utils.artifacts import load_all_artifacts, get_churn_probability
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config import ARTIFACTS_DIR, MONITORING_DIR, CHURN_CLASS
+from data.preprocessing import engineer_features, compute_features_hash
+from prediction_logging.prediction_logger import PredictionLogger
+from utils.artifacts import load_all_artifacts, get_churn_probability
 
 
 @asynccontextmanager

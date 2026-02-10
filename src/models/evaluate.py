@@ -1,3 +1,4 @@
+import sys
 import argparse
 from pathlib import Path
 
@@ -13,10 +14,10 @@ from sklearn.metrics import (
     ConfusionMatrixDisplay,
 )
 
-from src.config import ARTIFACTS_DIR, CHURN_CLASS
-from src.data.preprocessing import prepare_data
-from src.utils.artifacts import load_all_artifacts, get_churn_probability
-
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config import ARTIFACTS_DIR, CHURN_CLASS
+from data.preprocessing import prepare_data
+from utils.artifacts import load_all_artifacts, get_churn_probability
 
 def plot_calibration(y_true: pd.Series, y_prob: np.ndarray, model_name: str, save_path: Path) -> None:
     """
