@@ -97,7 +97,7 @@ def run_batch_inference(data_path: str, n_samples: int = 200):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data-path", type=str, default="data/storedata_total.xlsx")
+    parser.add_argument("--data-path", type=str, default="data/raw/storedata_total.xlsx")
     parser.add_argument("--n-samples", type=int, default=200)
     args = parser.parse_args()
     run_batch_inference(args.data_path, args.n_samples)
