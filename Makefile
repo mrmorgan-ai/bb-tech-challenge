@@ -23,7 +23,7 @@ evaluate:
 
 # Inference + Logging
 infer:
-	$(PYTHON) -m src.logging.batch_inference --data-path $(DATA_PATH) --n-samples 200
+	$(PYTHON) -m src.prediction_logging.batch_inference --data-path $(DATA_PATH) --n-samples 200
 	@echo "Inference complete — predictions logged to logs/predictions.db"
 
 # Monitoring

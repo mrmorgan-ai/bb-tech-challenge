@@ -1,5 +1,3 @@
-import json
-import pickle
 import argparse
 
 import numpy as np
@@ -15,17 +13,7 @@ from sklearn.metrics import (
 
 from src.config import ARTIFACTS_DIR, CHURN_CLASS
 from src.data.preprocessing import prepare_data
-
-
-def load_artifacts():
-    """Load saved model, preprocessor, and metadata."""
-    with open(ARTIFACTS_DIR / "best_model.pkl", "rb") as f:
-        model = pickle.load(f)
-    with open(ARTIFACTS_DIR / "preprocessor.pkl", "rb") as f:
-        preprocessor = pickle.load(f)
-    with open(ARTIFACTS_DIR / "model_metadata.json", "r") as f:
-        metadata = json.load(f)
-    return model, preprocessor, metadata
+from src.utils.artifacts import load_all_artifacts, get_churn_probability
 
 
 def plot_calibration(y_true, y_prob, model_name, save_path):
@@ -151,13 +139,13 @@ def plot_threshold_analysis(y_true, y_prob, optimal_threshold, save_path):
 
 def evaluate(data_path: str):
     """Run full evaluation pipeline and generate all plots."""
-    model, preprocessor, metadata = load_artifacts()
-    _, _, X_test, _, _, y_test, _ = prepare_data(data_path)
+    model, preprocessor, metadata = load_all_artifacts(ARTIFACTS_DIR)
+    _, _, X_test, _, _, y_test, _, _ = prepare_data(data_path)
 
     X_test_processed = preprocessor.transform(X_test)
 
-    # Get churn probabilities (class 0 = churn)
-    y_churn_prob = model.predict_proba(X_test_processed)[:, 0]
+    # Get churn probabilities via classes_ lookup (not hardcoded index)
+    y_churn_prob = get_churn_probability(model, X_test_processed, CHURN_CLASS) # type: ignore
     y_churn_true = (y_test == CHURN_CLASS).astype(int)
 
     threshold = metadata["threshold"]

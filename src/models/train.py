@@ -1,8 +1,6 @@
-import sys
 import json
 import pickle
 import argparse
-from pathlib import Path
 
 import mlflow
 import mlflow.sklearn
@@ -17,11 +15,10 @@ from sklearn.metrics import (
 )
 from xgboost import XGBClassifier
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from config import (
+from src.config import (
     MLFLOW_EXPERIMENT, ARTIFACTS_DIR, RANDOM_STATE, CHURN_CLASS,
 )
-from data.preprocessing import prepare_data
+from src.data.preprocessing import prepare_data
 
 def get_models() -> dict:
     """
@@ -163,7 +160,7 @@ def train_all(data_path: str) -> tuple:
     8. Save best model + preprocessor + metadata to artifacts/
     """
     # Step 1: Prepare data
-    X_train, X_val, X_test, y_train, y_val, y_test, preprocessor = prepare_data(
+    X_train, X_val, X_test, y_train, y_val, y_test, preprocessor, ref_date = prepare_data(
         data_path
     )
 
@@ -243,6 +240,7 @@ def train_all(data_path: str) -> tuple:
     metadata = {
         "best_model": best_model_name,
         "model_version": "1.0.0",
+        "ref_date": str(ref_date),
         "threshold": best["threshold"],
         "val_metrics": {k: float(v) for k, v in best["val_metrics"].items()},
         "test_metrics": {k: float(v) for k, v in best["test_metrics"].items()},

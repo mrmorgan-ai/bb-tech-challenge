@@ -1,46 +1,37 @@
-import sys
 import json
-import pickle
 import time
+from contextlib import asynccontextmanager
 from typing import Optional
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from config import ARTIFACTS_DIR, LOGS_DIR, MONITORING_DIR, CHURN_CLASS
-from data.preprocessing import compute_features_hash
-from logging.prediction_logger import PredictionLogger
+from src.config import ARTIFACTS_DIR, MONITORING_DIR, CHURN_CLASS
+from src.data.preprocessing import engineer_features, compute_features_hash
+from src.prediction_logging.prediction_logger import PredictionLogger
+from src.utils.artifacts import load_all_artifacts, get_churn_probability
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Load model artifacts on startup, clean up on shutdown."""
+    model, preprocessor, metadata = load_all_artifacts(ARTIFACTS_DIR)
+    app.state.model = model
+    app.state.preprocessor = preprocessor
+    app.state.metadata = metadata
+    app.state.logger = PredictionLogger()
+    yield
+
 
 app = FastAPI(
     title="Baubap Challenge Predictor API",
     version="1.0.0",
     description="Predict user churn with logged predictions and monitoring metrics.",
+    lifespan=lifespan,
 )
-
-# Singleton pattern for model artifacts
-_model = None
-_preprocessor = None
-_metadata = None
-_logger = None
-
-
-def get_artifacts():
-    """Lazy-load model artifacts on first request."""
-    global _model, _preprocessor, _metadata, _logger
-    if _model is None:
-        with open(ARTIFACTS_DIR / "best_model.pkl", "rb") as f:
-            _model = pickle.load(f)
-        with open(ARTIFACTS_DIR / "preprocessor.pkl", "rb") as f:
-            _preprocessor = pickle.load(f)
-        with open(ARTIFACTS_DIR / "model_metadata.json", "r") as f:
-            _metadata = json.load(f)
-        _logger = PredictionLogger()
-    return _model, _preprocessor, _metadata, _logger
 
 
 # Pydantic Models
@@ -55,10 +46,9 @@ class PredictionRequest(BaseModel):
     doorstep: int = Field(..., description="Doorstep delivery (0/1)")
     favday: str = Field(..., description="Favorite day of the week")
     city: str = Field(..., description="City code (DEL, BOM, MAA, BLR)")
-    tenure_days: float = Field(0, description="Days since account creation")
-    days_first_to_last_order: float = Field(0)
-    days_since_first_order: float = Field(0)
-    order_recency_ratio: float = Field(0, ge=0, le=1)
+    created: str = Field(..., description="Account creation date (ISO format)")
+    firstorder: str = Field(..., description="First order date (ISO format)")
+    lastorder: str = Field(..., description="Last order date (ISO format)")
     true_label: Optional[int] = Field(None, description="Ground truth if available")
 
 
@@ -73,10 +63,10 @@ class PredictionResponse(BaseModel):
 
 # Endpoints
 @app.get("/health")
-def health_check():
+def health_check(request: Request):
     """Smoke test: can we load the model and respond?"""
     try:
-        get_artifacts()
+        _ = request.app.state.model
         return {"status": "healthy", "model_loaded": True}
     except Exception as e:
         return JSONResponse(
@@ -86,48 +76,58 @@ def health_check():
 
 
 @app.post("/predict", response_model=PredictionResponse)
-def predict(request: PredictionRequest):
+def predict(request: Request, payload: PredictionRequest):
     """
     Generate a churn prediction for a single user.
 
-    Flow: validate input → preprocess → predict → log → respond.
+    Flow: validate input -> engineer features -> preprocess -> predict -> log -> respond.
     Total latency target: < 50ms (dominated by model inference, not I/O).
     """
-    model, preprocessor, metadata, logger = get_artifacts()
-    threshold = metadata["threshold"] # type: ignore
+    model = request.app.state.model
+    preprocessor = request.app.state.preprocessor
+    metadata = request.app.state.metadata
+    logger = request.app.state.logger
+
+    threshold = metadata["threshold"]
+    ref_date = pd.Timestamp(metadata["ref_date"])
     start = time.perf_counter()
 
     try:
-        # Build DataFrame matching the preprocessor's expected columns
-        features = request.model_dump(exclude={"true_label"})
+        # Build DataFrame with raw features + date columns
+        features = payload.model_dump(exclude={"true_label"})
         df = pd.DataFrame([features])
 
-        # Preprocess (same pipeline as training)
-        X_processed = preprocessor.transform(df) # type: ignore
+        # Parse dates and compute engineered features server-side
+        for col in ["created", "firstorder", "lastorder"]:
+            df[col] = pd.to_datetime(df[col], errors="coerce")
+        df, _ = engineer_features(df, ref_date=ref_date)
 
-        # Predict: P(churn) = P(retained=0) = predict_proba[:, 0]
-        churn_score = float(model.predict_proba(X_processed)[0, 0])
+        # Preprocess (same pipeline as training)
+        X_processed = preprocessor.transform(df)
+
+        # Predict via classes_ lookup (not hardcoded index)
+        churn_score = float(get_churn_probability(model, X_processed, CHURN_CLASS)[0])
         predicted_label = int(churn_score >= threshold)
 
         latency_ms = (time.perf_counter() - start) * 1000
 
         # Log prediction for monitoring
         features_hash = compute_features_hash(features)
-        request_id = logger.log_prediction( # type: ignore
-            model_name=metadata["best_model"], # type: ignore
-            model_version=metadata["model_version"], # type: ignore
+        request_id = logger.log_prediction(
+            model_name=metadata["best_model"],
+            model_version=metadata["model_version"],
             features_hash=features_hash,
             score=churn_score,
             predicted_label=predicted_label,
-            true_label=request.true_label,
+            true_label=payload.true_label,
             latency_ms=latency_ms,
             status="success",
         )
 
         return PredictionResponse(
             request_id=request_id,
-            model_name=metadata["best_model"], # type: ignore
-            model_version=metadata["model_version"], # type: ignore
+            model_name=metadata["best_model"],
+            model_version=metadata["model_version"],
             churn_score=round(churn_score, 6),
             predicted_label=predicted_label,
             threshold=threshold,
@@ -135,9 +135,9 @@ def predict(request: PredictionRequest):
 
     except Exception as e:
         latency_ms = (time.perf_counter() - start) * 1000
-        logger.log_prediction( # type: ignore
-            model_name=metadata.get("best_model", "unknown"), # type: ignore
-            model_version=metadata.get("model_version", "0.0.0"), # type: ignore
+        logger.log_prediction(
+            model_name=metadata.get("best_model", "unknown"),
+            model_version=metadata.get("model_version", "0.0.0"),
             features_hash="error",
             score=0.0,
             predicted_label=-1,
@@ -148,16 +148,16 @@ def predict(request: PredictionRequest):
 
 
 @app.get("/metrics")
-def metrics():
+def metrics(request: Request):
     """
     Return service metrics and latest drift report.
 
     This endpoint serves both operational monitoring (latency, error rate)
     and ML monitoring (drift report) in a single call.
     """
-    _, _, _, logger = get_artifacts()
+    logger = request.app.state.logger
 
-    predictions = logger.get_predictions(limit=1000) # type: ignore
+    predictions = logger.get_predictions(limit=1000)
     if not predictions:
         return {"message": "No predictions logged yet"}
 

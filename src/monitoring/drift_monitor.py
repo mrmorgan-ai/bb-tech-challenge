@@ -1,6 +1,4 @@
-import sys
 import json
-import pickle
 import sqlite3
 import argparse
 from pathlib import Path
@@ -10,14 +8,14 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from config import (
+from src.config import (
     ARTIFACTS_DIR, LOGS_DIR, MONITORING_DIR,
     NUMERIC_COLS, CATEGORICAL_COLS, ENGINEERED_COLS,
     PSI_WARNING, PSI_ALERT, KS_PVALUE_THRESHOLD, CHI2_PVALUE_THRESHOLD,
     PREDICTION_RATE_DRIFT_THRESHOLD, CHURN_CLASS
 )
-from data.preprocessing import prepare_data
+from src.data.preprocessing import prepare_data
+from src.utils.artifacts import load_all_artifacts, get_churn_probability
 
 
 # Calculate PSI
@@ -261,7 +259,7 @@ def main(data_path: str):
     Full monitoring pipeline.
     """
     print("Loading reference data (training set)...")
-    X_train, X_val, X_test, y_train, y_val, y_test, _ = prepare_data(data_path)
+    X_train, X_val, X_test, y_train, y_val, y_test, _, _ = prepare_data(data_path)
 
     reference = X_train
     current = X_test
@@ -289,23 +287,18 @@ def main(data_path: str):
 
     # Prediction Drift
     print("Computing prediction drift...")
-    with open(ARTIFACTS_DIR / "best_model.pkl", "rb") as f:
-        model = pickle.load(f)
-    with open(ARTIFACTS_DIR / "preprocessor.pkl", "rb") as f:
-        preprocessor = pickle.load(f)
-    with open(ARTIFACTS_DIR / "model_metadata.json", "r") as f:
-        metadata = json.load(f)
+    model, preprocessor, metadata = load_all_artifacts(ARTIFACTS_DIR)
 
     threshold = metadata["threshold"]
 
     # Reference score with validation set
     X_val_proc = preprocessor.transform(X_val)
-    ref_scores = model.predict_proba(X_val_proc)[:, 0]
+    ref_scores = get_churn_probability(model, X_val_proc, CHURN_CLASS) # type: ignore
     ref_labels = (ref_scores >= threshold).astype(int)
 
     # Current scores: test set (simulated production)
     X_test_proc = preprocessor.transform(X_test)
-    cur_scores = model.predict_proba(X_test_proc)[:, 0]
+    cur_scores = get_churn_probability(model, X_test_proc, CHURN_CLASS) # type: ignore
     cur_labels = (cur_scores >= threshold).astype(int)
 
     prediction_drift = compute_prediction_drift(
