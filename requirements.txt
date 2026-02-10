@@ -1,0 +1,26 @@
+# Core ML
+pandas
+numpy
+scikit-learn
+xgboost
+openpyxl
+
+# Experiment tracking
+mlflow
+
+# API
+fastapi
+uvicorn
+pydantic
+
+# Stats
+scipy
+
+# Visualization
+matplotlib
+seaborn
+ipykernel
+
+# Testing
+pytest
+
