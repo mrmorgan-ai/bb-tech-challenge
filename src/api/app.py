@@ -1,16 +1,20 @@
+import sys
 import json
 import pickle
 import time
 from typing import Optional
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from src.config import ARTIFACTS_DIR, LOGS_DIR, MONITORING_DIR, CHURN_CLASS
-from src.data.preprocessing import compute_features_hash
-from src.prediction_logging.prediction_logger import PredictionLogger
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config import ARTIFACTS_DIR, LOGS_DIR, MONITORING_DIR, CHURN_CLASS
+from data.preprocessing import compute_features_hash
+from logging.prediction_logger import PredictionLogger
 
 app = FastAPI(
     title="Baubap Challenge Predictor API",
@@ -75,7 +79,10 @@ def health_check():
         get_artifacts()
         return {"status": "healthy", "model_loaded": True}
     except Exception as e:
-        return {"status": "unhealthy", "error": str(e)}
+        return JSONResponse(
+            status_code=503,
+            content={"status": "unhealthy", "error": str(e)},
+        )
 
 
 @app.post("/predict", response_model=PredictionResponse)

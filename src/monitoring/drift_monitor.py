@@ -102,8 +102,8 @@ def compute_chi2_test(reference: pd.Series, current: pd.Series) -> dict:
             f_obs = curr_counts.values,
             f_exp = expected
         )
-    except:
-        # Handle edge cases
+    except Exception as e:
+        print(f"Chi2 test failed: {e}")
         chi2_stat, p_value = 0.0, 1.0
     
     drift_report = {
