@@ -1,7 +1,10 @@
 # Baubap Churn Prediction Challenge
 
 End-to-end ML system for predicting customer churn, built as a senior ML/MLOps engineering challenge. Includes model training with experiment tracking, a FastAPI serving layer, prediction logging, and drift monitoring.
+## Data Dictionary and Distribution
+The distribution of scores are 20.5%/79.5%
 
+![alt text](image.png)
 ## Project Structure
 
 ```
