@@ -183,6 +183,7 @@ def metrics(request: Request):
     # Attach latest drift report if available
     drift_report = None
     if MONITORING_DIR.exists():
+        # List all monitoring reports and catch latest
         json_reports = sorted(MONITORING_DIR.glob("drift_report_*.json"))
         if json_reports:
             with open(json_reports[-1]) as f:

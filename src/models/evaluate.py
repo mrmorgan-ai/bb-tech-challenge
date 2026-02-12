@@ -143,13 +143,13 @@ def plot_threshold_analysis(y_true: pd.Series, y_prob: np.ndarray, optimal_thres
 def evaluate(data_path: str) -> None:
     """Run full evaluation pipeline and generate all plots."""
     model, preprocessor, metadata = load_all_artifacts(ARTIFACTS_DIR)
-    _, _, X_test, _, _, y_test, _, _ = prepare_data(data_path)
+    _, X_val, _, _, y_val, _, _, _ = prepare_data(data_path)
 
-    X_test_processed = preprocessor.transform(X_test)
+    X_val_processed = preprocessor.transform(X_val)
 
     # Get churn probabilities via classes_ lookup (not hardcoded index)
-    y_churn_prob = get_churn_probability(model, X_test_processed, CHURN_CLASS) # type: ignore
-    y_churn_true = (y_test == CHURN_CLASS).astype(int)
+    y_churn_prob = get_churn_probability(model, X_val_processed, CHURN_CLASS) # type: ignore
+    y_churn_true = (y_val == CHURN_CLASS).astype(int)
 
     threshold = metadata["threshold"]
     y_pred_churn = (y_churn_prob >= threshold).astype(int)

@@ -1,5 +1,4 @@
 .PHONY: setup train evaluate infer monitor api clean test all
-
 # Configuration
 PYTHON = python
 DATA_PATH = data/raw/storedata_total.xlsx

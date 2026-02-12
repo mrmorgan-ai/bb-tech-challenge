@@ -33,8 +33,8 @@ bb-tech-challenge/
 ## Quick Start
 
 ```bash
-# Install dependencies
-uv sync
+# Install dependencies and create directories
+make setup        # Runs uv sync + creates logs/, artifacts/, monitoring/, data/
 
 # Run full pipeline
 make train        # Train models (LR, XGBoost, MLP) with MLflow tracking
