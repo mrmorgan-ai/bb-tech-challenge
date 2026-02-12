@@ -1,21 +1,23 @@
-import argparse
+import sys
 import json
-import pickle
 import sqlite3
-from datetime import datetime
+import argparse
 from pathlib import Path
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
 from scipy import stats
 
-from src.config import (
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config import (
     ARTIFACTS_DIR, LOGS_DIR, MONITORING_DIR,
     NUMERIC_COLS, CATEGORICAL_COLS, ENGINEERED_COLS,
     PSI_WARNING, PSI_ALERT, KS_PVALUE_THRESHOLD, CHI2_PVALUE_THRESHOLD,
     PREDICTION_RATE_DRIFT_THRESHOLD, CHURN_CLASS
 )
-from src.data.preprocessing import prepare_data
+from data.preprocessing import prepare_data
+from utils.artifacts import load_all_artifacts, get_churn_probability
 
 
 # Calculate PSI
@@ -62,20 +64,20 @@ def psi_alert_level(psi_value: float) -> str:
 
 
 # Calculate KS Test
-def compute_ks_test(reference: np.ndarray, current: np.ndarray) -> dict:
+def compute_ks_test(reference: np.ndarray, current: np.ndarray) -> dict[str, float | bool]:
     """
     Two-sample Kolmogorov-Smirnov test.
     """
     stat, pvalue = stats.ks_2samp(reference, current)
     return {
-        "statistic": float(stat), # type: ignore
+        "ks_statistics": float(stat), # type: ignore
         "p_value": float(pvalue), # type: ignore
         "drift_detected": bool(pvalue < KS_PVALUE_THRESHOLD), # type: ignore
     }
 
 
 # Calculate chi-square
-def compute_chi2_test(reference: pd.Series, current: pd.Series) -> dict:
+def compute_chi2_test(reference: pd.Series, current: pd.Series) -> dict[str, float | bool]:
     """
     Chi-square test for categorical feature drift.
     """
@@ -100,8 +102,8 @@ def compute_chi2_test(reference: pd.Series, current: pd.Series) -> dict:
             f_obs = curr_counts.values,
             f_exp = expected
         )
-    except:
-        # Handle edge cases
+    except Exception as e:
+        print(f"Chi2 test failed: {e}")
         chi2_stat, p_value = 0.0, 1.0
     
     drift_report = {
@@ -118,7 +120,7 @@ def compute_prediction_drift(
     cur_scores: np.ndarray,
     ref_rate: float, 
     cur_rate: float,
-) -> dict:
+) -> dict[str, float | bool | str]:
     """
     Detect shifts in model output distribution.
     """
@@ -136,7 +138,7 @@ def compute_prediction_drift(
 
 
 # Service metrics
-def compute_service_metrics(db_path: Path) -> dict:
+def compute_service_metrics(db_path: Path) -> dict[str, int | float | str]:
     """
     Query prediction logs for operational health metrics.
     """
@@ -164,8 +166,7 @@ def compute_service_metrics(db_path: Path) -> dict:
     }
 
 
-# ─── Report Generation ───────────────────────────────────────
-
+# Report Generation
 def generate_report(
     data_drift: dict,
     prediction_drift: dict,
@@ -178,7 +179,7 @@ def generate_report(
     report_path = output_dir / f"drift_report_{timestamp}.md"
 
     lines = [
-        f"# Monitoring Report — {timestamp}",
+        f"# Monitoring Report - {timestamp}",
         "",
         "## 1. Data Drift",
         "",
@@ -193,7 +194,7 @@ def generate_report(
         ks_drift = "Yes" if metrics["ks"]["drift_detected"] else "No"
         lines.append(
             f"| {feat} | {metrics['psi']:.4f} | {psi_status} | "
-            f"{metrics['ks']['statistic']:.4f} | {metrics['ks']['p_value']:.4f} | {ks_drift} |"
+            f"{metrics['ks']['ks_statistics']:.4f} | {metrics['ks']['p_value']:.4f} | {ks_drift} |"
         )
 
     lines += [
@@ -207,7 +208,7 @@ def generate_report(
     for feat, metrics in data_drift.get("categorical", {}).items():
         drift = "Yes" if metrics["drift_detected"] else "No"
         lines.append(
-            f"| {feat} | {metrics['statistic']:.4f} | {metrics['p_value']:.4f} | {drift} |"
+            f"| {feat} | {metrics['chi2_statistics']:.4f} | {metrics['p_value']:.4f} | {drift} |"
         )
 
     lines += [
@@ -233,7 +234,7 @@ def generate_report(
         f"| Metric | Threshold | Meaning |",
         f"|--------|-----------|---------|",
         f"| PSI Warning | > {PSI_WARNING} | Moderate distribution shift |",
-        f"| PSI Alert | > {PSI_ALERT} | Significant shift — investigate |",
+        f"| PSI Alert | > {PSI_ALERT} | Significant shift - investigate |",
         f"| KS p-value | < {KS_PVALUE_THRESHOLD} | Statistically significant difference |",
         f"| Chi2 p-value | < {CHI2_PVALUE_THRESHOLD} | Category proportions shifted |",
         f"| Prediction rate | > {PREDICTION_RATE_DRIFT_THRESHOLD:.0%} absolute | Model behavior changed |",
@@ -255,12 +256,12 @@ def generate_report(
     return report_path
 
 
-def main(data_path: str):
+def main(data_path: str) -> Path:
     """
     Full monitoring pipeline.
     """
     print("Loading reference data (training set)...")
-    X_train, X_val, X_test, y_train, y_val, y_test, _ = prepare_data(data_path)
+    X_train, X_val, X_test, y_train, y_val, y_test, _, _ = prepare_data(data_path)
 
     reference = X_train
     current = X_test
@@ -276,8 +277,8 @@ def main(data_path: str):
             cur_vals = current[feat].dropna().values
             if len(ref_vals) > 0 and len(cur_vals) > 0:
                 data_drift["numeric"][feat] = {
-                    "psi": compute_psi(ref_vals, cur_vals),
-                    "ks": compute_ks_test(ref_vals, cur_vals),
+                    "psi": compute_psi(ref_vals, cur_vals), # type: ignore
+                    "ks": compute_ks_test(ref_vals, cur_vals), # type: ignore
                 }
 
     for feat in CATEGORICAL_COLS:
@@ -288,23 +289,18 @@ def main(data_path: str):
 
     # Prediction Drift
     print("Computing prediction drift...")
-    with open(ARTIFACTS_DIR / "best_model.pkl", "rb") as f:
-        model = pickle.load(f)
-    with open(ARTIFACTS_DIR / "preprocessor.pkl", "rb") as f:
-        preprocessor = pickle.load(f)
-    with open(ARTIFACTS_DIR / "model_metadata.json", "r") as f:
-        metadata = json.load(f)
+    model, preprocessor, metadata = load_all_artifacts(ARTIFACTS_DIR)
 
     threshold = metadata["threshold"]
 
-    # Reference scores: validation set (what we optimized on)
+    # Reference score with validation set
     X_val_proc = preprocessor.transform(X_val)
-    ref_scores = model.predict_proba(X_val_proc)[:, 0]
+    ref_scores = get_churn_probability(model, X_val_proc, CHURN_CLASS) # type: ignore
     ref_labels = (ref_scores >= threshold).astype(int)
 
     # Current scores: test set (simulated production)
     X_test_proc = preprocessor.transform(X_test)
-    cur_scores = model.predict_proba(X_test_proc)[:, 0]
+    cur_scores = get_churn_probability(model, X_test_proc, CHURN_CLASS) # type: ignore
     cur_labels = (cur_scores >= threshold).astype(int)
 
     prediction_drift = compute_prediction_drift(

@@ -1,8 +1,9 @@
-import json
-import pickle
+import sys
 import argparse
+from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 from sklearn.calibration import calibration_curve
@@ -13,22 +14,12 @@ from sklearn.metrics import (
     ConfusionMatrixDisplay,
 )
 
-from src.config import ARTIFACTS_DIR, CHURN_CLASS
-from src.data.preprocessing import prepare_data
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config import ARTIFACTS_DIR, CHURN_CLASS
+from data.preprocessing import prepare_data
+from utils.artifacts import load_all_artifacts, get_churn_probability
 
-
-def load_artifacts():
-    """Load saved model, preprocessor, and metadata."""
-    with open(ARTIFACTS_DIR / "best_model.pkl", "rb") as f:
-        model = pickle.load(f)
-    with open(ARTIFACTS_DIR / "preprocessor.pkl", "rb") as f:
-        preprocessor = pickle.load(f)
-    with open(ARTIFACTS_DIR / "model_metadata.json", "r") as f:
-        metadata = json.load(f)
-    return model, preprocessor, metadata
-
-
-def plot_calibration(y_true, y_prob, model_name, save_path):
+def plot_calibration(y_true: pd.Series, y_prob: np.ndarray, model_name: str, save_path: Path) -> None:
     """
     Plot calibration curve and score distribution.
     """
@@ -56,7 +47,7 @@ def plot_calibration(y_true, y_prob, model_name, save_path):
     plt.close()
 
 
-def plot_lift_chart(y_true, y_prob, save_path):
+def plot_lift_chart(y_true: pd.Series, y_prob: np.ndarray, save_path: Path) -> None:
     """
     Plot cumulative lift and gains charts.
 
@@ -101,7 +92,7 @@ def plot_lift_chart(y_true, y_prob, save_path):
     plt.close()
 
 
-def plot_threshold_analysis(y_true, y_prob, optimal_threshold, save_path):
+def plot_threshold_analysis(y_true: pd.Series, y_prob: np.ndarray, optimal_threshold: float, save_path: Path) -> None:
     """
     Plot precision, recall, and F1 as functions of threshold.
 
@@ -149,16 +140,16 @@ def plot_threshold_analysis(y_true, y_prob, optimal_threshold, save_path):
     plt.close()
 
 
-def evaluate(data_path: str):
+def evaluate(data_path: str) -> None:
     """Run full evaluation pipeline and generate all plots."""
-    model, preprocessor, metadata = load_artifacts()
-    _, _, X_test, _, _, y_test, _ = prepare_data(data_path)
+    model, preprocessor, metadata = load_all_artifacts(ARTIFACTS_DIR)
+    _, X_val, _, _, y_val, _, _, _ = prepare_data(data_path)
 
-    X_test_processed = preprocessor.transform(X_test)
+    X_val_processed = preprocessor.transform(X_val)
 
-    # Get churn probabilities (class 0 = churn)
-    y_churn_prob = model.predict_proba(X_test_processed)[:, 0]
-    y_churn_true = (y_test == CHURN_CLASS).astype(int)
+    # Get churn probabilities via classes_ lookup (not hardcoded index)
+    y_churn_prob = get_churn_probability(model, X_val_processed, CHURN_CLASS) # type: ignore
+    y_churn_true = (y_val == CHURN_CLASS).astype(int)
 
     threshold = metadata["threshold"]
     y_pred_churn = (y_churn_prob >= threshold).astype(int)

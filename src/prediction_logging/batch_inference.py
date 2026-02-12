@@ -1,31 +1,29 @@
+import sys
 import json
-import pickle
 import time
 import argparse
+from pathlib import Path
 
 import numpy as np
 
-from src.config import ARTIFACTS_DIR, CHURN_CLASS
-from src.data.preprocessing import prepare_data, compute_features_hash
-from src.prediction_logging.prediction_logger import PredictionLogger
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config import ARTIFACTS_DIR, CHURN_CLASS
+from data.preprocessing import prepare_data, compute_features_hash
+from prediction_logging.prediction_logger import PredictionLogger
+from utils.artifacts import load_all_artifacts, get_churn_probability
 
 
-def run_batch_inference(data_path: str, n_samples: int = 200):
+def run_batch_inference(data_path: str, n_samples: int = 200) -> None:
     """Run batch inference on test data, logging each prediction."""
-    # Load artifacts
-    with open(ARTIFACTS_DIR / "best_model.pkl", "rb") as f:
-        model = pickle.load(f)
-    with open(ARTIFACTS_DIR / "preprocessor.pkl", "rb") as f:
-        preprocessor = pickle.load(f)
-    with open(ARTIFACTS_DIR / "model_metadata.json", "r") as f:
-        metadata = json.load(f)
+    # Load artifacts (centralized, type-checked)
+    model, preprocessor, metadata = load_all_artifacts(ARTIFACTS_DIR)
 
     model_name = metadata["best_model"]
     model_version = metadata["model_version"]
     threshold = metadata["threshold"]
 
     # Prepare data — use test set to simulate "new" production data
-    _, _, X_test, _, _, y_test, _ = prepare_data(data_path)
+    _, _, X_test, _, _, y_test, _, _ = prepare_data(data_path)
 
     # Sample n rows (deterministic for reproducibility)
     if n_samples < len(X_test):
@@ -50,9 +48,9 @@ def run_batch_inference(data_path: str, n_samples: int = 200):
         start = time.perf_counter()
 
         try:
-            # Score single sample
-            x_single = X_processed[i:i + 1]
-            churn_score = float(model.predict_proba(x_single)[0, 0])  # P(churn)
+            # Score single sample via classes lookup
+            x_single = X_processed[i:i + 1] # type: ignore
+            churn_score = float(get_churn_probability(model, x_single, CHURN_CLASS)[0])
             predicted_label = int(churn_score >= threshold)
 
             latency_ms = (time.perf_counter() - start) * 1000
