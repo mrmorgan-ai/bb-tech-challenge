@@ -5,8 +5,8 @@ import pytest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from config import ENGINEERED_COLS, TARGET_COL
-from data.preprocessing import (
+from src.config import ENGINEERED_COLS, TARGET_COL
+from src.data.preprocessing import (
     clean_data,
     engineer_features,
     build_preprocessor,

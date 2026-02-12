@@ -164,7 +164,7 @@ def metrics(request: Request):
     if not predictions:
         return {"message": "No predictions logged yet"}
 
-    latencies = [p["latency_ms"] for p in predictions if p["status"] == "success"]
+    latencies = [p["latency_ms"] for p in predictions if p["status"] == "success"] # type: ignore
     scores = [p["score"] for p in predictions if p["status"] == "success"]
     error_count = sum(1 for p in predictions if p["status"] != "success")
 
@@ -172,8 +172,8 @@ def metrics(request: Request):
         "total_predictions": len(predictions),
         "error_count": error_count,
         "error_rate": error_count / len(predictions) if predictions else 0,
-        "latency_p50_ms": round(float(np.percentile(latencies, 50)), 2) if latencies else 0,
-        "latency_p95_ms": round(float(np.percentile(latencies, 95)), 2) if latencies else 0,
+        "latency_p50_ms": round(float(np.percentile(latencies, 50)), 2) if latencies else 0, # type: ignore
+        "latency_p95_ms": round(float(np.percentile(latencies, 95)), 2) if latencies else 0, # type: ignore
         "avg_churn_score": round(float(np.mean(scores)), 4) if scores else 0,
         "predicted_positive_rate": round(
             sum(1 for p in predictions if p["predicted_label"] == 1) / len(predictions), 4
